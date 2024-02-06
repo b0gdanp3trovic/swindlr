@@ -166,12 +166,11 @@ func main() {
 		proxy.ErrorHandler = func(writer http.ResponseWriter, request *http.Request, e error) {
 			log.Printf("[%s %s\n]", serverUrl.Host, e.Error())
 			retries := GetRetryFromContext(request)
+
 			if retries < 3 {
-				select {
-				case <-time.After(10 * time.Millisecond):
-					ctx := context.WithValue(request.Context(), Retry, retries+1)
-					proxy.ServeHTTP(writer, request.WithContext(ctx))
-				}
+				time.Sleep(10 * time.Millisecond)
+				ctx := context.WithValue(request.Context(), Retry, retries+1)
+				proxy.ServeHTTP(writer, request.WithContext(ctx))
 				return
 			}
 
