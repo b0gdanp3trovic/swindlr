@@ -50,7 +50,7 @@ func (s *ServerPool) AddBackend(backend *Backend) {
 }
 
 func (s *ServerPool) NextIndex() int {
-	return int(atomic.AddUint64(&s.current, uint64(1)%uint64(len(s.backends))))
+	return int(atomic.AddUint64(&s.current, uint64(1)) % uint64(len(s.backends)))
 }
 
 func (s *ServerPool) GetNextPeer() *Backend {
