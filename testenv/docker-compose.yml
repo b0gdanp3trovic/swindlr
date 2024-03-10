@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  nodeapp1:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - CONTAINER_ID=nodeapp1
+
+  nodeapp2:
+    build: .
+    ports:
+      - "3001:3000"
+    environment:
+      - CONTAINER_ID=nodeapp2
+
+  nodeapp3:
+    build: .
+    ports:
+      - "3002:3000"
+    environment:
+      - CONTAINER_ID=nodeapp3
