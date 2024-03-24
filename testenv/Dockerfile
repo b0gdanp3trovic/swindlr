@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 3000
 
 # Define the command to run your app
-CMD [ "node", "app.js" ]
+CMD [ "node", "main.js" ]
