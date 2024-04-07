@@ -4,7 +4,7 @@ const port = 3000;
 
 app.get('/', (req, res) => {
   const containerId = process.env.CONTAINER_ID || 'Unknown';
-  console.log(`This is container ID: ${containerId}`);
+  console.log(`Sending container ID: ${containerId}`);
   res.send(`Container ID: ${containerId}`);
 });
 
