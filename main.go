@@ -9,10 +9,11 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 const (
@@ -145,18 +146,18 @@ func healthcheck() {
 var serverPool ServerPool
 
 func main() {
-	var serverList string
-	var port int
-	flag.StringVar(&serverList, "backends", "", "Load balancer backends, use commas to separate.")
-	flag.IntVar(&port, "port", 3030, "Port to serve")
+	var customPath string
+	flag.StringVar(&customPath, "configPath", "", "Path to config file")
 	flag.Parse()
 
-	if len(serverList) == 0 {
+	port := viper.GetInt("port")
+	backendURLs := viper.GetStringSlice("backends")
+
+	if len(backendURLs) == 0 {
 		log.Fatal("Please provide one or more backends to load balance.")
 	}
 
-	tokens := strings.Split(serverList, ",")
-	for _, tok := range tokens {
+	for _, tok := range backendURLs {
 		serverUrl, err := url.Parse(tok)
 		if err != nil {
 			log.Fatal(err)
