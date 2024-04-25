@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  swindlr:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - nodeapp1
+      - nodeapp2
+      - nodeapp3
+    command: ["./swindlr", "-backends=http://nodeapp1:3000,http://nodeapp2:3000,http://nodeapp3:3000", "-port=8080"]
+
+  nodeapp1:
+    build: 
+      context: ./swindlr_testenv
+      dockerfile: Dockerfile
+    environment:
+      - CONTAINER_ID=nodeapp1
+
+  nodeapp2:
+    build: 
+      context: ./swindlr_testenv
+      dockerfile: Dockerfile
+    environment:
+      - CONTAINER_ID=nodeapp2
+
+  nodeapp3:
+    build: 
+      context: ./swindlr_testenv
+      dockerfile: Dockerfile
+    environment:
+      - CONTAINER_ID=nodeapp3
