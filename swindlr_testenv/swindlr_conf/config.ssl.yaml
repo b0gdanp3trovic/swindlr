@@ -1,0 +1,8 @@
+port: 8081
+backends:
+  - http://nodeapp1:3000
+  - http://nodeapp2:3000
+  - http://nodeapp3:3000
+use_ssl: true
+ssl_cert_file: "path/to/cert.pem"
+ssl_key_file: "path/to/key.pem"

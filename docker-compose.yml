@@ -3,15 +3,17 @@ version: '3.8'
 services:
   swindlr:
     build: 
-      context: .
+      context: ./swindlr
       dockerfile: Dockerfile
+    volumes: 
+      - ./swindlr_testenv/swindlr_conf/config.yaml:/root/config.yaml
     ports:
       - "8080:8080"
     depends_on:
       - nodeapp1
       - nodeapp2
       - nodeapp3
-    command: ["./swindlr", "-backends=http://nodeapp1:3000,http://nodeapp2:3000,http://nodeapp3:3000", "-port=8080"]
+    command: ["./swindlr"]
 
   nodeapp1:
     build: 
