@@ -7,7 +7,7 @@ import (
 )
 
 func initConfig(customPath string) {
-	viper.SetConfigFile("config")
+	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("/etc/swindlr/")
 	viper.AddConfigPath("$HOME/.swindlr")

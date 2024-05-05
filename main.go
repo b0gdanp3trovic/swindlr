@@ -147,15 +147,13 @@ var serverPool ServerPool
 
 func main() {
 	var customPath string
-	flag.StringVar(&customPath, "configPath", "", "Path to config file")
+	flag.StringVar(&customPath, "configPath", "", "Custom path to the config directory")
 	flag.Parse()
+
+	initConfig(customPath)
 
 	port := viper.GetInt("port")
 	backendURLs := viper.GetStringSlice("backends")
-
-	if len(backendURLs) == 0 {
-		log.Fatal("Please provide one or more backends to load balance.")
-	}
 
 	for _, tok := range backendURLs {
 		serverUrl, err := url.Parse(tok)
