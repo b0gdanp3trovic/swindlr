@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile
     volumes: 
       - ./swindlr_testenv/swindlr_conf/config.yaml:/root/config.yaml
+      - ./swindlr_testenv/ssl:/root/ssl
     ports:
       - "8080:8080"
     depends_on:
