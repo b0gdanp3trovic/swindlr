@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/url"
 	"sync/atomic"
 )
@@ -45,12 +44,8 @@ func (s *ServerPool) MarkBackendStatus(backendUrl *url.URL, alive bool) {
 
 func (s *ServerPool) HealthCheck() {
 	for _, b := range s.backends {
-		status := "up"
 		alive := isBackendAlive(b.URL)
 		b.setAlive(alive)
-		if !alive {
-			status = "down"
-		}
-		log.Printf("%s [%s]\n", b.URL, status)
+		healthUpdates <- HealthStatus{URL: b.URL.String(), Alive: alive}
 	}
 }

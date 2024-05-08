@@ -1,12 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
 )
+
+type HealthStatus struct {
+	URL   string
+	Alive bool
+}
+
+var healthUpdates = make(chan HealthStatus)
 
 func GetAttemptsFromContext(r *http.Request) int {
 	if attempts, ok := r.Context().Value(Attempts).(int); ok {
@@ -47,6 +55,13 @@ func isBackendAlive(u *url.URL) bool {
 	}
 	defer conn.Close()
 	return true
+}
+
+func manageHealthUpdate() {
+	for status := range healthUpdates {
+		fmt.Printf("Received health update for %s: %t\n", status.URL, status.Alive)
+		//alerts, metrics
+	}
 }
 
 func healthcheck() {
