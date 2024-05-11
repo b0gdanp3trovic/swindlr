@@ -69,9 +69,7 @@ func healthcheck() {
 	for {
 		select {
 		case <-t.C:
-			log.Println("Health check starting...")
 			serverPool.HealthCheck()
-			log.Println("Health check finished.")
 		}
 	}
 }
