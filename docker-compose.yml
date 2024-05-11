@@ -17,7 +17,7 @@ services:
     command: ["./swindlr"]
 
   nodeapp1:
-    build: 
+    build:
       context: ./swindlr_testenv
       dockerfile: Dockerfile
     environment:
