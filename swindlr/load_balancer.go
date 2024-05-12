@@ -16,17 +16,24 @@ type HealthStatus struct {
 	Alive bool
 }
 
+type contextKey int
+
+const (
+	AttemptsKey contextKey = iota
+	RetryKey
+)
+
 var healthUpdates = make(chan HealthStatus)
 
 func GetAttemptsFromContext(r *http.Request) int {
-	if attempts, ok := r.Context().Value(Attempts).(int); ok {
+	if attempts, ok := r.Context().Value(AttemptsKey).(int); ok {
 		return attempts
 	}
 	return 1
 }
 
 func GetRetryFromContext(r *http.Request) int {
-	if retry, ok := r.Context().Value(Retry).(int); ok {
+	if retry, ok := r.Context().Value(RetryKey).(int); ok {
 		return retry
 	}
 	return 1
@@ -40,7 +47,7 @@ func CreateReverseProxy(serverURL *url.URL) *httputil.ReverseProxy {
 
 		if retries < 3 {
 			time.Sleep(10 * time.Millisecond)
-			ctx := context.WithValue(request.Context(), Retry, retries+1)
+			ctx := context.WithValue(request.Context(), RetryKey, retries+1)
 			proxy.ServeHTTP(writer, request.WithContext(ctx))
 			return
 		}
@@ -49,7 +56,7 @@ func CreateReverseProxy(serverURL *url.URL) *httputil.ReverseProxy {
 
 		attempts := GetAttemptsFromContext(request)
 		log.Printf("%s(%s) Attempting retry %d\n", request.RemoteAddr, request.URL.Path, attempts)
-		ctx := context.WithValue(request.Context(), Attempts, attempts+1)
+		ctx := context.WithValue(request.Context(), AttemptsKey, attempts+1)
 		lb(writer, request.WithContext(ctx))
 	}
 	return proxy
