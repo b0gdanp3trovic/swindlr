@@ -11,6 +11,7 @@ type Backend struct {
 	Alive        bool
 	mux          sync.RWMutex
 	ReverseProxy *httputil.ReverseProxy
+	Connections  int
 }
 
 func (b *Backend) setAlive(alive bool) {
@@ -24,4 +25,16 @@ func (b *Backend) isAlive() (alive bool) {
 	alive = b.Alive
 	b.mux.RUnlock()
 	return
+}
+
+func (b *Backend) IncrementConnections() {
+	b.mux.Lock()
+	defer b.mux.Unlock()
+	b.Connections++
+}
+
+func (b *Backend) DecrementConnections() {
+	b.mux.Lock()
+	defer b.mux.Unlock()
+	b.Connections--
 }

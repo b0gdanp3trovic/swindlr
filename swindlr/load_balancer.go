@@ -75,6 +75,8 @@ func lb(w http.ResponseWriter, r *http.Request) {
 
 	peer := serverPool.GetNextPeer()
 	if peer != nil {
+		peer.IncrementConnections()
+		defer peer.DecrementConnections()
 		peer.ReverseProxy.ServeHTTP(w, r)
 		return
 	}
