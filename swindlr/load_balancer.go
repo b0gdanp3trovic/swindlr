@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"time"
 )
@@ -28,6 +30,39 @@ func GetRetryFromContext(r *http.Request) int {
 		return retry
 	}
 	return 1
+}
+
+func CreateReverseProxy(serverURL *url.URL) *httputil.ReverseProxy {
+	proxy := httputil.NewSingleHostReverseProxy(serverURL)
+	proxy.ErrorHandler = func(writer http.ResponseWriter, request *http.Request, e error) {
+		log.Printf("[%s %s\n]", serverURL.Host, e.Error())
+		retries := GetRetryFromContext(request)
+
+		if retries < 3 {
+			time.Sleep(10 * time.Millisecond)
+			ctx := context.WithValue(request.Context(), Retry, retries+1)
+			proxy.ServeHTTP(writer, request.WithContext(ctx))
+			return
+		}
+
+		serverPool.MarkBackendStatus(serverURL, false)
+
+		attempts := GetAttemptsFromContext(request)
+		log.Printf("%s(%s) Attempting retry %d\n", request.RemoteAddr, request.URL.Path, attempts)
+		ctx := context.WithValue(request.Context(), Attempts, attempts+1)
+		lb(writer, request.WithContext(ctx))
+	}
+	return proxy
+}
+
+func CreateNewBackend(serverURL *url.URL) *Backend {
+	backend := Backend{
+		URL:          serverURL,
+		Alive:        true,
+		ReverseProxy: CreateReverseProxy(serverURL),
+	}
+
+	return &backend
 }
 
 func lb(w http.ResponseWriter, r *http.Request) {
