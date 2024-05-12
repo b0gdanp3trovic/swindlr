@@ -51,6 +51,8 @@ func initConfig(customPath string) {
 	viper.SetDefault("use_ssl", false)
 	viper.SetDefault("ssl_cert_file", "")
 	viper.SetDefault("ssl_key_file", "")
+	viper.SetDefault("use_dynamic", false)
+	viper.SetDefault("apiPort", 8082)
 
 	// Read the config file
 	if err := viper.ReadInConfig(); err != nil {

@@ -57,6 +57,7 @@ func (s *ServerPool) GetNextPeer() *Backend {
 func (s *ServerPool) MarkBackendStatus(backendUrl *url.URL, alive bool) {
 	for _, b := range s.backends {
 		if b.URL.String() == backendUrl.String() {
+			log.Printf("Marking %s alive status as %t", backendUrl, alive)
 			b.setAlive(alive)
 			break
 		}
