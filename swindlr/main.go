@@ -29,6 +29,9 @@ func main() {
 
 	port := viper.GetInt("port")
 	backendURLs := viper.GetStringSlice("backends")
+	useSSL := viper.GetBool("use_ssl")
+	certPath := viper.GetString("ssl_cert_file")
+	keyPath := viper.GetString("ssl_key_file")
 
 	for _, tok := range backendURLs {
 		serverUrl, err := url.Parse(tok)
@@ -73,8 +76,11 @@ func main() {
 	go healthcheck()
 	go manageHealthUpdate()
 
-	log.Printf("Load balancer started at :%d\n", port)
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal(err)
+	if useSSL {
+		log.Printf("Starting HTTPS server on port %d\n", port)
+		log.Fatal(server.ListenAndServeTLS(certPath, keyPath))
+	} else {
+		log.Printf("Starting HTTP server on port %d\n", port)
+		log.Fatal(server.ListenAndServe())
 	}
 }

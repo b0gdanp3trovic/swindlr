@@ -4,5 +4,5 @@ backends:
   - http://nodeapp2:3000
   - http://nodeapp3:3000
 use_ssl: true
-ssl_cert_file: "root/ssl/cert.pem"
-ssl_key_file: "root/ssl/key.pem"
+ssl_cert_file: "/root/ssl/cert.pem"
+ssl_key_file: "/root/ssl/key.pem" 

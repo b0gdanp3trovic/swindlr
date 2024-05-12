@@ -10,6 +10,7 @@ services:
       - ./swindlr_testenv/ssl:/root/ssl
     ports:
       - "8080:8080"
+      - "8081:8081"
     depends_on:
       - nodeapp1
       - nodeapp2

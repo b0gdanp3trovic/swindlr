@@ -13,6 +13,8 @@ func checkSSLConfig() {
 	sslKeyFile := viper.GetString("ssl_key_file")
 
 	if useSSL {
+		log.Println("SSL is enabled.")
+
 		if sslCertFile == "" || sslKeyFile == "" {
 			log.Fatal("Error: SSL is enabled but 'ssl_cert_file' or 'ssl_key_file' file is not specified.")
 		}
@@ -26,9 +28,9 @@ func checkSSLConfig() {
 		}
 
 		log.Println("SSL configuration validated successfully.")
+	} else {
+		log.Println("SSL is not enabled.")
 	}
-
-	log.Println("SSL is not enabled.")
 }
 
 func initConfig(customPath string) {
