@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
 
@@ -76,6 +77,19 @@ func main() {
 	go healthcheck()
 	go manageHealthUpdate()
 
+	// Prepare API endpoints
+	gin.SetMode(gin.ReleaseMode)
+	apiRouter := gin.Default()
+	apiRouter.POST("/api/backends", AddBackend)
+	apiRouter.DELETE("/api/backends/:url", RemoveBackend)
+
+	// run API server
+	go func() {
+		log.Printf("Starting API server on port 8082")
+		apiRouter.Run(":8082")
+	}()
+
+	// run main server
 	if useSSL {
 		log.Printf("Starting HTTPS server on port %d\n", port)
 		log.Fatal(server.ListenAndServeTLS(certPath, keyPath))
