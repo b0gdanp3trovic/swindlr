@@ -51,7 +51,7 @@ func main() {
 	go manageHealthUpdate()
 
 	// Prepare API endpoints
-	//gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 	apiRouter := gin.Default()
 	apiRouter.POST("/api/backends", AddBackend)
 	apiRouter.DELETE("/api/backends/:url", RemoveBackend)
