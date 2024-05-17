@@ -3,19 +3,18 @@ package loadbalancer
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/url"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type ServerPool struct {
-	backends []*Backend
-	current  uint64
-	mux      sync.RWMutex
-}
-
-func NewServerPool() *ServerPool {
-	return &ServerPool{}
+	backends  []*Backend
+	current   uint64
+	mux       sync.RWMutex
+	algorithm Algorithm
 }
 
 func (s *ServerPool) AddBackend(backend *Backend) {
@@ -74,4 +73,38 @@ func (s *ServerPool) HealthCheck(healthUpdates chan<- HealthStatus) {
 		b.setAlive(alive)
 		healthUpdates <- HealthStatus{URL: b.URL.String(), Alive: alive}
 	}
+}
+
+func NewServerPool(algorithm Algorithm) *ServerPool {
+	return &ServerPool{
+		algorithm: algorithm,
+	}
+}
+
+func SetupServerPool(backendURLs []string, strategy string) *ServerPool {
+	var algo Algorithm
+	switch strategy {
+	case "round_robin":
+		algo = &RoundRobin{}
+	case "least_connections":
+		algo = &LeastConnections{}
+	case "random":
+		randSrc := rand.NewSource(time.Now().UnixNano())
+		algo = &Random{rand: rand.New(randSrc)}
+	default:
+		log.Fatalf("Unknown load balancing strategy: %s", strategy)
+	}
+
+	serverPool := NewServerPool(algo)
+
+	for _, urlStr := range backendURLs {
+		parsedURL, err := url.Parse(urlStr)
+		if err != nil {
+			log.Fatalf("Error parsing backend URL: %s", err)
+		}
+		backend := CreateNewBackend(parsedURL, serverPool)
+		serverPool.AddBackend(backend)
+	}
+
+	return serverPool
 }

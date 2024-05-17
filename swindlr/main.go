@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 
 	"github.com/b0gdanp3trovic/swindlr/api"
 	"github.com/b0gdanp3trovic/swindlr/loadbalancer"
@@ -31,18 +30,7 @@ func main() {
 	certPath := viper.GetString("ssl_cert_file")
 	keyPath := viper.GetString("ssl_key_file")
 
-	serverPool := loadbalancer.NewServerPool()
-
-	for _, tok := range backendURLs {
-		serverUrl, err := url.Parse(tok)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		serverPool.AddBackend(loadbalancer.CreateNewBackend(serverUrl, serverPool))
-
-		log.Printf("Configured server: %s\n", serverUrl)
-	}
+	serverPool := loadbalancer.SetupServerPool(backendURLs, "least_connections")
 
 	server := http.Server{
 		Addr: fmt.Sprintf(":%d", port),
