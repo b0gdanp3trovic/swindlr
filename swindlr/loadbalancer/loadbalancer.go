@@ -71,6 +71,8 @@ func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool) {
 	}
 
 	peer := sp.GetNextPeer()
+
+	//TODO: extract connection incrementing
 	if peer != nil {
 		peer.IncrementConnections()
 		defer peer.DecrementConnections()
