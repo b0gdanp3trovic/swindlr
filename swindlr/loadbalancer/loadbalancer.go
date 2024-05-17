@@ -1,4 +1,4 @@
-package main
+package loadbalancer
 
 import (
 	"context"
@@ -23,7 +23,7 @@ const (
 	RetryKey
 )
 
-var healthUpdates = make(chan HealthStatus)
+var HealthUpdates = make(chan HealthStatus)
 
 func GetAttemptsFromContext(r *http.Request) int {
 	if attempts, ok := r.Context().Value(AttemptsKey).(int); ok {
@@ -39,7 +39,7 @@ func GetRetryFromContext(r *http.Request) int {
 	return 1
 }
 
-func CreateReverseProxy(serverURL *url.URL) *httputil.ReverseProxy {
+func CreateReverseProxy(serverURL *url.URL, sp *ServerPool) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(serverURL)
 	proxy.ErrorHandler = func(writer http.ResponseWriter, request *http.Request, e error) {
 		log.Printf("[%s %s\n]", serverURL.Host, e.Error())
@@ -52,27 +52,17 @@ func CreateReverseProxy(serverURL *url.URL) *httputil.ReverseProxy {
 			return
 		}
 
-		serverPool.MarkBackendStatus(serverURL, false)
+		sp.MarkBackendStatus(serverURL, false)
 
 		attempts := GetAttemptsFromContext(request)
 		log.Printf("%s(%s) Attempting retry %d\n", request.RemoteAddr, request.URL.Path, attempts)
 		ctx := context.WithValue(request.Context(), AttemptsKey, attempts+1)
-		lb(writer, request.WithContext(ctx))
+		LB(writer, request.WithContext(ctx), sp)
 	}
 	return proxy
 }
 
-func CreateNewBackend(serverURL *url.URL) *Backend {
-	backend := Backend{
-		URL:          serverURL,
-		Alive:        true,
-		ReverseProxy: CreateReverseProxy(serverURL),
-	}
-
-	return &backend
-}
-
-func lb(w http.ResponseWriter, r *http.Request) {
+func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool) {
 	attempts := GetAttemptsFromContext(r)
 	if attempts > 3 {
 		log.Printf("%s(%s) Max attempts reached, terminating\n", r.RemoteAddr, r.URL.Path)
@@ -80,7 +70,7 @@ func lb(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	peer := serverPool.GetNextPeer()
+	peer := sp.GetNextPeer()
 	if peer != nil {
 		peer.IncrementConnections()
 		defer peer.DecrementConnections()
@@ -90,7 +80,7 @@ func lb(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Service not available", http.StatusServiceUnavailable)
 }
 
-func isBackendAlive(u *url.URL) bool {
+func IsBackendAlive(u *url.URL) bool {
 	timeout := 2 * time.Second
 	conn, err := net.DialTimeout("tcp", u.Host, timeout)
 	if err != nil {
@@ -101,19 +91,19 @@ func isBackendAlive(u *url.URL) bool {
 	return true
 }
 
-func manageHealthUpdate() {
-	for status := range healthUpdates {
+func ManageHealthUpdate() {
+	for status := range HealthUpdates {
 		fmt.Printf("Received health update for %s: %t\n", status.URL, status.Alive)
 		//alerts, metrics
 	}
 }
 
-func healthcheck() {
+func Health(sp *ServerPool) {
 	t := time.NewTicker(time.Minute * 2)
 	for {
 		select {
 		case <-t.C:
-			serverPool.HealthCheck()
+			sp.HealthCheck(HealthUpdates)
 		}
 	}
 }

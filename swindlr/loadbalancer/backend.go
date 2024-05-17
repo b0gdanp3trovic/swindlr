@@ -1,4 +1,4 @@
-package main
+package loadbalancer
 
 import (
 	"net/http/httputil"
@@ -37,4 +37,12 @@ func (b *Backend) DecrementConnections() {
 	b.mux.Lock()
 	defer b.mux.Unlock()
 	b.Connections--
+}
+
+func CreateNewBackend(serverURL *url.URL, serverPool *ServerPool) *Backend {
+	return &Backend{
+		URL:          serverURL,
+		Alive:        true,
+		ReverseProxy: CreateReverseProxy(serverURL, serverPool),
+	}
 }

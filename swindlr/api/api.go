@@ -1,13 +1,14 @@
-package main
+package api
 
 import (
 	"net/http"
 	"net/url"
 
+	"github.com/b0gdanp3trovic/swindlr/loadbalancer"
 	"github.com/gin-gonic/gin"
 )
 
-func AddBackend(c *gin.Context) {
+func AddBackend(c *gin.Context, serverPool *loadbalancer.ServerPool) {
 	var input struct {
 		URL string `json:"URL"`
 	}
@@ -23,11 +24,11 @@ func AddBackend(c *gin.Context) {
 		return
 	}
 
-	serverPool.AddBackend(CreateNewBackend(parsedUrl))
+	serverPool.AddBackend(loadbalancer.CreateNewBackend(parsedUrl, serverPool))
 	c.JSON(http.StatusOK, gin.H{"message": "Backend added successfully"})
 }
 
-func RemoveBackend(c *gin.Context) {
+func RemoveBackend(c *gin.Context, serverPool *loadbalancer.ServerPool) {
 	url := c.Param("url")
 	if err := serverPool.RemoveBackend(url); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

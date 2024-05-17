@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/b0gdanp3trovic/swindlr/api"
+	"github.com/b0gdanp3trovic/swindlr/loadbalancer"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
@@ -15,8 +17,6 @@ const (
 	Attempts int = iota
 	Retry
 )
-
-var serverPool ServerPool
 
 func main() {
 	var customPath string
@@ -31,30 +31,38 @@ func main() {
 	certPath := viper.GetString("ssl_cert_file")
 	keyPath := viper.GetString("ssl_key_file")
 
+	serverPool := loadbalancer.NewServerPool()
+
 	for _, tok := range backendURLs {
 		serverUrl, err := url.Parse(tok)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		serverPool.AddBackend(CreateNewBackend(serverUrl))
+		serverPool.AddBackend(loadbalancer.CreateNewBackend(serverUrl, serverPool))
 
 		log.Printf("Configured server: %s\n", serverUrl)
 	}
 
 	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: http.HandlerFunc(lb),
+		Addr: fmt.Sprintf(":%d", port),
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			loadbalancer.LB(w, r, serverPool)
+		}),
 	}
 
-	go healthcheck()
-	go manageHealthUpdate()
+	go loadbalancer.Health(serverPool)
+	go loadbalancer.ManageHealthUpdate()
 
 	// Prepare API endpoints
 	gin.SetMode(gin.ReleaseMode)
 	apiRouter := gin.Default()
-	apiRouter.POST("/api/backends", AddBackend)
-	apiRouter.DELETE("/api/backends/:url", RemoveBackend)
+	apiRouter.POST("/api/backends", func(c *gin.Context) {
+		api.AddBackend(c, serverPool)
+	})
+	apiRouter.DELETE("/api/backends/:url", func(c *gin.Context) {
+		api.RemoveBackend(c, serverPool)
+	})
 
 	// run API server
 	go func() {

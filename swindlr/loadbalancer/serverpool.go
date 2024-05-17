@@ -1,4 +1,4 @@
-package main
+package loadbalancer
 
 import (
 	"fmt"
@@ -12,6 +12,10 @@ type ServerPool struct {
 	backends []*Backend
 	current  uint64
 	mux      sync.RWMutex
+}
+
+func NewServerPool() *ServerPool {
+	return &ServerPool{}
 }
 
 func (s *ServerPool) AddBackend(backend *Backend) {
@@ -64,9 +68,9 @@ func (s *ServerPool) MarkBackendStatus(backendUrl *url.URL, alive bool) {
 	}
 }
 
-func (s *ServerPool) HealthCheck() {
+func (s *ServerPool) HealthCheck(healthUpdates chan<- HealthStatus) {
 	for _, b := range s.backends {
-		alive := isBackendAlive(b.URL)
+		alive := IsBackendAlive(b.URL)
 		b.setAlive(alive)
 		healthUpdates <- HealthStatus{URL: b.URL.String(), Alive: alive}
 	}
