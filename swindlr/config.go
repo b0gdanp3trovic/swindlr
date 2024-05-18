@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+// TODO - find a good way to check for invalid options
+
 func checkSSLConfig() {
 	useSSL := viper.GetBool("use_ssl")
 	sslCertFile := viper.GetString("ssl_cert_file")
@@ -33,6 +35,21 @@ func checkSSLConfig() {
 	}
 }
 
+func checkLoadBalancerStrategy() {
+	strategy := viper.GetString("load_balancer.strategy")
+	validStrategies := map[string]bool{
+		"round_robin":       true,
+		"least_connections": true,
+		"random":            true,
+	}
+
+	if _, valid := validStrategies[strategy]; !valid {
+		log.Fatalf("Invalid load balancing strategy specified: %s", strategy)
+	}
+
+	log.Printf("Load balancing strategy '%s' is set.", strategy)
+}
+
 func initConfig(customPath string) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -53,6 +70,7 @@ func initConfig(customPath string) {
 	viper.SetDefault("ssl_key_file", "")
 	viper.SetDefault("use_dynamic", false)
 	viper.SetDefault("apiPort", 8082)
+	viper.SetDefault("load_balancer.strategy", "round_robin")
 
 	// Read the config file
 	if err := viper.ReadInConfig(); err != nil {
@@ -61,5 +79,7 @@ func initConfig(customPath string) {
 		log.Printf("Loaded configuration from file: %s", viper.ConfigFileUsed())
 	}
 
+	//Validate
 	checkSSLConfig()
+	checkLoadBalancerStrategy()
 }

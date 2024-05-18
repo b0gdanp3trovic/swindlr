@@ -6,13 +6,11 @@ import (
 	"math/rand"
 	"net/url"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 type ServerPool struct {
 	backends  []*Backend
-	current   uint64
 	mux       sync.RWMutex
 	algorithm Algorithm
 }
@@ -38,23 +36,11 @@ func (s *ServerPool) RemoveBackend(URL string) error {
 	return fmt.Errorf("backend not found with url URL %s", URL)
 }
 
-func (s *ServerPool) NextIndex() int {
-	return int(atomic.AddUint64(&s.current, uint64(1)) % uint64(len(s.backends)))
-}
-
 func (s *ServerPool) GetNextPeer() *Backend {
-	next := s.NextIndex()
-	l := len(s.backends) + next
-	for i := next; i < l; i++ {
-		idx := i % len(s.backends)
-		if s.backends[idx].isAlive() {
-			if i != next {
-				atomic.StoreUint64(&s.current, uint64(idx))
-			}
-			return s.backends[idx]
-		}
+	if s.algorithm == nil {
+		log.Fatal("No load balancing algorithm specified")
 	}
-	return nil
+	return s.algorithm.SelectBackend(s.backends)
 }
 
 func (s *ServerPool) MarkBackendStatus(backendUrl *url.URL, alive bool) {

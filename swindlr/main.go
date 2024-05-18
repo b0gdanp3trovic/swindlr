@@ -29,8 +29,10 @@ func main() {
 	useSSL := viper.GetBool("use_ssl")
 	certPath := viper.GetString("ssl_cert_file")
 	keyPath := viper.GetString("ssl_key_file")
+	useDynamic := viper.GetBool("use_dynamic")
+	strategy := viper.GetString("load_balancer.strategy")
 
-	serverPool := loadbalancer.SetupServerPool(backendURLs, "least_connections")
+	serverPool := loadbalancer.SetupServerPool(backendURLs, strategy)
 
 	server := http.Server{
 		Addr: fmt.Sprintf(":%d", port),
@@ -43,20 +45,26 @@ func main() {
 	go loadbalancer.ManageHealthUpdate()
 
 	// Prepare API endpoints
-	gin.SetMode(gin.ReleaseMode)
-	apiRouter := gin.Default()
-	apiRouter.POST("/api/backends", func(c *gin.Context) {
-		api.AddBackend(c, serverPool)
-	})
-	apiRouter.DELETE("/api/backends/:url", func(c *gin.Context) {
-		api.RemoveBackend(c, serverPool)
-	})
+	if useDynamic {
+		gin.SetMode(gin.ReleaseMode)
+		apiRouter := gin.Default()
+		apiRouter.POST("/api/backends", func(c *gin.Context) {
+			api.AddBackend(c, serverPool)
+		})
+		apiRouter.DELETE("/api/backends/:url", func(c *gin.Context) {
+			api.RemoveBackend(c, serverPool)
+		})
 
-	// run API server
-	go func() {
-		log.Printf("Starting API server on port 8082")
-		apiRouter.Run(":8082")
-	}()
+		// run API server
+		go func() {
+			log.Printf("Starting API server on port 8082")
+			apiRouter.Run(":8082")
+		}()
+
+		log.Printf("Dynamic server pool management is enabled.")
+	} else {
+		log.Printf("Dynamic server pool management is disabled.")
+	}
 
 	// run main server
 	if useSSL {

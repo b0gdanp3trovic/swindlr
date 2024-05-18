@@ -4,3 +4,6 @@ backends:
   - http://nodeapp1:3000
   - http://nodeapp2:3000
   - http://nodeapp3:3000
+use_dynamic: true
+load_balancer:
+  strategy: least_connections
