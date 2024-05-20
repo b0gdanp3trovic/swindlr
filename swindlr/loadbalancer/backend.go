@@ -12,6 +12,7 @@ type Backend struct {
 	mux          sync.RWMutex
 	ReverseProxy *httputil.ReverseProxy
 	Connections  int
+	SessionMap   map[string]*Backend
 }
 
 func (b *Backend) setAlive(alive bool) {

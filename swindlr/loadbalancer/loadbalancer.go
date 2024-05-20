@@ -70,7 +70,7 @@ func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool) {
 		return
 	}
 
-	peer := sp.GetNextPeer()
+	peer := sp.GetNextPeer(r)
 
 	if peer != nil {
 		peer.IncrementConnections()
@@ -107,8 +107,4 @@ func Health(sp *ServerPool) {
 			sp.HealthCheck(HealthUpdates)
 		}
 	}
-}
-
-func updateConnections(peer *Backend) {
-
 }

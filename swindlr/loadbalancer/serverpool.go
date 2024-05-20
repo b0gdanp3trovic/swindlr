@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"sync"
 	"time"
@@ -13,6 +14,7 @@ type ServerPool struct {
 	backends  []*Backend
 	mux       sync.RWMutex
 	algorithm Algorithm
+	sessions  map[string]*Backend
 }
 
 func (s *ServerPool) AddBackend(backend *Backend) {
@@ -36,11 +38,43 @@ func (s *ServerPool) RemoveBackend(URL string) error {
 	return fmt.Errorf("backend not found with url URL %s", URL)
 }
 
-func (s *ServerPool) GetNextPeer() *Backend {
-	if s.algorithm == nil {
-		log.Fatal("No load balancing algorithm specified")
+func (s *ServerPool) GetBackendBySessionID(sessionID string) *Backend {
+	s.mux.RLock()
+	backend, exists := s.sessions[sessionID]
+	s.mux.RUnlock()
+
+	if exists {
+		return backend
 	}
-	return s.algorithm.SelectBackend(s.backends)
+
+	return nil
+}
+
+func (s *ServerPool) AssignSessionToBackend(sessionID string, backend *Backend) {
+	s.mux.Lock()
+	s.sessions[sessionID] = backend
+	s.mux.Unlock()
+}
+
+func (s *ServerPool) GetNextPeer(r *http.Request) *Backend {
+	//Check if sessionID exists in the request
+	//cookies
+	sessionID, err := r.Cookie("SESSION_ID")
+	if err == nil && sessionID != nil {
+		backend := s.GetBackendBySessionID(sessionID.Value)
+		if backend != nil {
+			return backend
+		}
+	}
+
+	//There is no valid session, use an algorithm
+	//to assign backend and store it
+	newBackend := s.algorithm.SelectBackend(s.backends)
+	if newBackend != nil && sessionID != nil {
+		s.AssignSessionToBackend(sessionID.Value, newBackend)
+	}
+
+	return newBackend
 }
 
 func (s *ServerPool) MarkBackendStatus(backendUrl *url.URL, alive bool) {
@@ -64,6 +98,7 @@ func (s *ServerPool) HealthCheck(healthUpdates chan<- HealthStatus) {
 func NewServerPool(algorithm Algorithm) *ServerPool {
 	return &ServerPool{
 		algorithm: algorithm,
+		sessions:  make(map[string]*Backend),
 	}
 }
 
