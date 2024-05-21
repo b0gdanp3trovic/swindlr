@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"sync"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 type ServerPool struct {
@@ -59,18 +61,29 @@ func (s *ServerPool) AssignSessionToBackend(sessionID string, backend *Backend) 
 func (s *ServerPool) GetNextPeer(r *http.Request) *Backend {
 	//Check if sessionID exists in the request
 	//cookies
-	sessionID, err := r.Cookie("SESSION_ID")
-	if err == nil && sessionID != nil {
-		backend := s.GetBackendBySessionID(sessionID.Value)
-		if backend != nil {
-			return backend
+	var sessionID *http.Cookie
+	var err error
+
+	useStickySessions := viper.GetBool("use_sticky_sessions")
+
+	if useStickySessions {
+		sessionID, err = r.Cookie("SESSION_ID")
+		if err == nil && sessionID != nil {
+			backend := s.GetBackendBySessionID(sessionID.Value)
+			if backend != nil {
+				return backend
+			}
 		}
 	}
 
 	//There is no valid session, use an algorithm
 	//to assign backend and store it
 	newBackend := s.algorithm.SelectBackend(s.backends)
-	if newBackend != nil && sessionID != nil {
+	if newBackend == nil {
+		return nil
+	}
+
+	if useStickySessions {
 		s.AssignSessionToBackend(sessionID.Value, newBackend)
 	}
 

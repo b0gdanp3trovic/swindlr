@@ -6,4 +6,4 @@ backends:
   - http://nodeapp3:3000
 use_dynamic: true
 load_balancer:
-  strategy: least_connections
+  strategy: round_robin

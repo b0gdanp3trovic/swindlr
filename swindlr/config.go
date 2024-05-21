@@ -71,6 +71,7 @@ func initConfig(customPath string) {
 	viper.SetDefault("use_dynamic", false)
 	viper.SetDefault("apiPort", 8082)
 	viper.SetDefault("load_balancer.strategy", "round_robin")
+	viper.SetDefault("use_sticky_sessions", false)
 
 	// Read the config file
 	if err := viper.ReadInConfig(); err != nil {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/spf13/viper"
 )
 
 type HealthStatus struct {
@@ -65,19 +66,23 @@ func CreateReverseProxy(serverURL *url.URL, sp *ServerPool) *httputil.ReversePro
 }
 
 func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool) {
-	sessionID, err := r.Cookie("SESSION_ID")
-	if err != nil || sessionID == nil {
-		newID := generateSessionID()
-		sessionID = &http.Cookie{
-			Name:     "SESSION_ID",
-			Value:    newID,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   true,
-		}
+	useStickySessions := viper.GetBool("use_sticky_sessions")
 
-		http.SetCookie(w, sessionID)
-		log.Printf("New session created: %s", newID)
+	if useStickySessions {
+		sessionID, err := r.Cookie("SESSION_ID")
+		if err != nil || sessionID == nil {
+			newID := generateSessionID()
+			sessionID = &http.Cookie{
+				Name:     "SESSION_ID",
+				Value:    newID,
+				Path:     "/",
+				HttpOnly: true,
+				Secure:   true,
+			}
+
+			http.SetCookie(w, sessionID)
+			log.Printf("New session created: %s", newID)
+		}
 	}
 
 	attempts := GetAttemptsFromContext(r)

@@ -21,13 +21,6 @@ func (b *Backend) setAlive(alive bool) {
 	b.mux.Unlock()
 }
 
-func (b *Backend) isAlive() (alive bool) {
-	b.mux.RLock()
-	alive = b.Alive
-	b.mux.RUnlock()
-	return
-}
-
 func (b *Backend) IncrementConnections() {
 	b.mux.Lock()
 	defer b.mux.Unlock()
