@@ -9,6 +9,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type HealthStatus struct {
@@ -63,6 +65,21 @@ func CreateReverseProxy(serverURL *url.URL, sp *ServerPool) *httputil.ReversePro
 }
 
 func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool) {
+	sessionID, err := r.Cookie("SESSION_ID")
+	if err != nil || sessionID == nil {
+		newID := generateSessionID()
+		sessionID = &http.Cookie{
+			Name:     "SESSION_ID",
+			Value:    newID,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   true,
+		}
+
+		http.SetCookie(w, sessionID)
+		log.Printf("New session created: %s", newID)
+	}
+
 	attempts := GetAttemptsFromContext(r)
 	if attempts > 3 {
 		log.Printf("%s(%s) Max attempts reached, terminating\n", r.RemoteAddr, r.URL.Path)
@@ -72,13 +89,15 @@ func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool) {
 
 	peer := sp.GetNextPeer(r)
 
-	if peer != nil {
-		peer.IncrementConnections()
-		defer peer.DecrementConnections()
-		peer.ReverseProxy.ServeHTTP(w, r)
+	if peer == nil {
+		http.Error(w, "Service not available", http.StatusServiceUnavailable)
 		return
 	}
-	http.Error(w, "Service not available", http.StatusServiceUnavailable)
+
+	peer.IncrementConnections()
+	defer peer.DecrementConnections()
+
+	peer.ReverseProxy.ServeHTTP(w, r)
 }
 
 func IsBackendAlive(u *url.URL) bool {
@@ -107,4 +126,8 @@ func Health(sp *ServerPool) {
 			sp.HealthCheck(HealthUpdates)
 		}
 	}
+}
+
+func generateSessionID() string {
+	return uuid.New().String()
 }
