@@ -65,7 +65,6 @@ func (s *ServerPool) GetNextPeer(r *http.Request) *Backend {
 	var err error
 
 	useStickySessions := viper.GetBool("use_sticky_sessions")
-
 	if useStickySessions {
 		sessionID, err = r.Cookie("SESSION_ID")
 		if err == nil && sessionID != nil {
