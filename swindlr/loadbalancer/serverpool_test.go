@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetBackendBySessionID(t *testing.T) {
-	sp := NewServerPool(&RoundRobin{})
+	sp := NewServerPool(nil)
 	backend1 := &Backend{
 		URL:   parseURL("http://backend1.test"),
 		Alive: true,
@@ -34,4 +34,37 @@ func parseURL(urlStr string) *url.URL {
 		panic(err)
 	}
 	return parsedURL
+}
+
+func TestRemoveBackend(t *testing.T) {
+	sp := NewServerPool(nil)
+	url1 := parseURL("http://backend1.test")
+	url2 := parseURL("http://backend2.test")
+
+	backend1 := &Backend{
+		URL:   url1,
+		Alive: true,
+	}
+
+	backend2 := &Backend{
+		URL:   url2,
+		Alive: true,
+	}
+
+	sp.AddBackend(backend1)
+	sp.AddBackend(backend2)
+
+	err := sp.RemoveBackend("http://backend1.test")
+	if err != nil {
+		t.Errorf("Failed to remove existing backend: %v", err)
+	}
+
+	if len(sp.backends) != 1 || sp.backends[0] != backend2 {
+		t.Errorf("Backend1 was not removed correctly.")
+	}
+
+	err = sp.RemoveBackend("http://nonexistent.test")
+	if err == nil {
+		t.Error("Expected an error while trying to remove a backend that does not exist.")
+	}
 }
