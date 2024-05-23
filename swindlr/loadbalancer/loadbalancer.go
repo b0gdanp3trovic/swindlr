@@ -102,7 +102,8 @@ func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool) {
 	peer.IncrementConnections()
 	defer peer.DecrementConnections()
 
-	peer.ReverseProxy.ServeHTTP(w, r)
+	rateLimitedProxy := RateLimitMiddleware(peer.ReverseProxy, peer)
+	rateLimitedProxy.ServeHTTP(w, r)
 }
 
 func IsBackendAlive(u *url.URL) bool {

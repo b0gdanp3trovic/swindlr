@@ -7,3 +7,6 @@ backends:
 use_dynamic: true
 load_balancer:
   strategy: round_robin
+rate_limiting:
+  rate: 10
+  bucket_size: 5

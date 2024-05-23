@@ -7,3 +7,6 @@ backends:
 use_ssl: true
 ssl_cert_file: "/root/ssl/cert.pem"
 ssl_key_file: "/root/ssl/key.pem" 
+rate_limiting:
+  rate: 10
+  bucket_size: 5
