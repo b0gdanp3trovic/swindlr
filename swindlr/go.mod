@@ -1,6 +1,6 @@
 module github.com/b0gdanp3trovic/swindlr
 
-go 1.18
+go 1.21
 
 require github.com/spf13/viper v1.18.2
 
