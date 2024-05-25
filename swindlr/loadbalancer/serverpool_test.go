@@ -1,8 +1,12 @@
 package loadbalancer
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"github.com/spf13/viper"
 )
 
 func TestGetBackendBySessionID(t *testing.T) {
@@ -67,4 +71,63 @@ func TestRemoveBackend(t *testing.T) {
 	if err == nil {
 		t.Error("Expected an error while trying to remove a backend that does not exist.")
 	}
+}
+
+func setupServerPool(algorithm Algorithm) *ServerPool {
+	serverPool := NewServerPool(algorithm)
+	serverUrl, _ := url.Parse("http://backend1.test")
+	backend1 := CreateNewBackend(serverUrl, serverPool)
+	serverPool.AddBackend(backend1)
+	return serverPool
+}
+
+func TestStickySessions(t *testing.T) {
+	req := httptest.NewRequest("GET", "http://backend.test", nil)
+
+	t.Run("Sticky Sessions enabled with valid session", func(t *testing.T) {
+		viper.Set("use_sticky_sessions", true)
+		sp := setupServerPool(&RoundRobin{})
+		sp.sessions["session123"] = sp.backends[0]
+
+		req.AddCookie(&http.Cookie{Name: "SESSION_ID", Value: "session123"})
+
+		backend := sp.GetNextPeer(req)
+		if backend != sp.backends[0] {
+			t.Errorf("Expected backend %v, got %v", sp.backends[0], backend)
+		}
+	})
+
+	t.Run("Sticky sessions enabled without valid session", func(t *testing.T) {
+		viper.Set("use_sticky_sessions", true)
+		sp := setupServerPool(&RoundRobin{})
+
+		req.Header.Set("Cookie", "")
+
+		// If no sessions are available, the next peer
+		// should be determined algoritmically
+		backend := sp.GetNextPeer(req)
+
+		if backend == nil {
+			t.Errorf("Expected a backend, got nil")
+		}
+	})
+
+	t.Run("Sticky sessions disabled", func(t *testing.T) {
+		viper.Set("use_sticky_sessions", false)
+		sp := setupServerPool(&RoundRobin{})
+
+		backend := sp.GetNextPeer(req)
+		if backend == nil {
+			t.Errorf("Expected a backend, got nil")
+		}
+	})
+
+	t.Run("No backends available", func(t *testing.T) {
+		sp := NewServerPool(&RoundRobin{})
+
+		backend := sp.GetNextPeer(req)
+		if backend != nil {
+			t.Errorf("Expected no backend, got %v", backend)
+		}
+	})
 }

@@ -81,7 +81,7 @@ func (s *ServerPool) GetNextPeer(r *http.Request) *Backend {
 		return nil
 	}
 
-	if useStickySessions {
+	if useStickySessions && sessionID != nil && sessionID.Value != "" {
 		s.AssignSessionToBackend(sessionID.Value, newBackend)
 	}
 
