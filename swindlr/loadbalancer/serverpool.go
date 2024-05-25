@@ -59,8 +59,7 @@ func (s *ServerPool) AssignSessionToBackend(sessionID string, backend *Backend) 
 }
 
 func (s *ServerPool) GetNextPeer(r *http.Request) *Backend {
-	//Check if sessionID exists in the request
-	//cookies
+	//Check if sessionID exists in the request cookies
 	var sessionID *http.Cookie
 	var err error
 
