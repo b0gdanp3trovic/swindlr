@@ -5,6 +5,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/spf13/viper"
 	"golang.org/x/time/rate"
@@ -18,6 +19,7 @@ type Backend struct {
 	Connections  int
 	SessionMap   map[string]*Backend
 	Limiter      *rate.Limiter
+	Latency      time.Duration
 }
 
 func (b *Backend) setAlive(alive bool) {

@@ -1,12 +1,9 @@
 package loadbalancer
 
 import (
-	"log"
 	"math/rand"
 	"sync/atomic"
 	"time"
-
-	"github.com/oschwald/geoip2-golang"
 )
 
 type Algorithm interface {
@@ -64,16 +61,21 @@ func (r *Random) SelectBackend(backends []*Backend) *Backend {
 	return r.backends[index]
 }
 
-type GeoRouting struct {
-	geoDB *geoip2.Reader
+type LatencyAware struct {
+	backends []*Backend
 }
 
-func NewGeoRouting(dbPath string) *GeoRouting {
-	db, err := geoip2.Open(dbPath)
+func (l *LatencyAware) SelectBackend() *Backend {
+	var selected *Backend
+	minLatency := time.Duration(1<<63 - 1)
 
-	if err != nil {
-		log.Fatal("Failed to open GeoIP database: ", err)
+	for _, backend := range l.backends {
+		backend.mux.RLock()
+		if backend.Alive && (selected == nil || backend.Latency < minLatency) {
+			selected = backend
+			minLatency = backend.Latency
+		}
+		backend.mux.RUnlock()
 	}
-
-	return &GeoRouting{geoDB: db}
+	return selected
 }
