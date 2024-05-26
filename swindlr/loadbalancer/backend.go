@@ -28,6 +28,12 @@ func (b *Backend) setAlive(alive bool) {
 	b.mux.Unlock()
 }
 
+func (b *Backend) setLatency(latency time.Duration) {
+	b.mux.Lock()
+	b.Latency = latency
+	b.mux.Unlock()
+}
+
 func (b *Backend) IncrementConnections() {
 	b.mux.Lock()
 	defer b.mux.Unlock()

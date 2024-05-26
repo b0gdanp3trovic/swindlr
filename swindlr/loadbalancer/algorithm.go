@@ -40,8 +40,7 @@ func (lc *LeastConnections) SelectBackend(backends []*Backend) *Backend {
 }
 
 type Random struct {
-	backends []*Backend
-	rand     *rand.Rand
+	rand *rand.Rand
 }
 
 func NewRandom() *Random {
@@ -57,19 +56,17 @@ func (r *Random) SelectBackend(backends []*Backend) *Backend {
 		return nil
 	}
 
-	index := r.rand.Intn(len(r.backends))
-	return r.backends[index]
+	index := r.rand.Intn(len(backends))
+	return backends[index]
 }
 
-type LatencyAware struct {
-	backends []*Backend
-}
+type LatencyAware struct{}
 
-func (l *LatencyAware) SelectBackend() *Backend {
+func (l *LatencyAware) SelectBackend(backends []*Backend) *Backend {
 	var selected *Backend
 	minLatency := time.Duration(1<<63 - 1)
 
-	for _, backend := range l.backends {
+	for _, backend := range backends {
 		backend.mux.RLock()
 		if backend.Alive && (selected == nil || backend.Latency < minLatency) {
 			selected = backend

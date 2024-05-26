@@ -106,15 +106,17 @@ func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool) {
 	rateLimitedProxy.ServeHTTP(w, r)
 }
 
-func IsBackendAlive(u *url.URL) bool {
+func BackendStatus(u *url.URL) (bool, time.Duration) {
 	timeout := 2 * time.Second
+	start := time.Now()
 	conn, err := net.DialTimeout("tcp", u.Host, timeout)
+	latency := time.Since(start)
 	if err != nil {
 		log.Println("Site unreachable, error: ", err)
-		return false
+		return false, latency
 	}
 	defer conn.Close()
-	return true
+	return true, latency
 }
 
 func ManageHealthUpdate() {

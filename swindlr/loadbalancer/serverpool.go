@@ -100,8 +100,9 @@ func (s *ServerPool) MarkBackendStatus(backendUrl *url.URL, alive bool) {
 
 func (s *ServerPool) HealthCheck(healthUpdates chan<- HealthStatus) {
 	for _, b := range s.backends {
-		alive := IsBackendAlive(b.URL)
+		alive, latency := BackendStatus(b.URL)
 		b.setAlive(alive)
+		b.setLatency(latency)
 		healthUpdates <- HealthStatus{URL: b.URL.String(), Alive: alive}
 	}
 }
@@ -123,6 +124,8 @@ func SetupServerPool(backendURLs []string, strategy string) *ServerPool {
 	case "random":
 		randSrc := rand.NewSource(time.Now().UnixNano())
 		algo = &Random{rand: rand.New(randSrc)}
+	case "latency_aware":
+		algo = &LatencyAware{}
 	default:
 		log.Fatalf("Unknown load balancing strategy: %s", strategy)
 	}
