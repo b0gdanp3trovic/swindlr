@@ -72,7 +72,7 @@ func NewGeoRouting(dbPath string) *GeoRouting {
 	db, err := geoip2.Open(dbPath)
 
 	if err != nil {
-		log.Fatal("Failed to open GeoIP database: %s", err)
+		log.Fatal("Failed to open GeoIP database: ", err)
 	}
 
 	return &GeoRouting{geoDB: db}
