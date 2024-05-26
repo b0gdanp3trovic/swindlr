@@ -122,7 +122,7 @@ func BackendStatus(u *url.URL) (bool, time.Duration) {
 func ManageHealthUpdate() {
 	for status := range HealthUpdates {
 		fmt.Printf("Received health update for %s: %t\n", status.URL, status.Alive)
-		//alerts, metrics
+		//alerts, metrics, health updates
 	}
 }
 
