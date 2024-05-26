@@ -1,9 +1,12 @@
 package loadbalancer
 
 import (
+	"log"
 	"math/rand"
 	"sync/atomic"
 	"time"
+
+	"github.com/oschwald/geoip2-golang"
 )
 
 type Algorithm interface {
@@ -59,4 +62,18 @@ func (r *Random) SelectBackend(backends []*Backend) *Backend {
 
 	index := r.rand.Intn(len(r.backends))
 	return r.backends[index]
+}
+
+type GeoRouting struct {
+	geoDB *geoip2.Reader
+}
+
+func NewGeoRouting(dbPath string) *GeoRouting {
+	db, err := geoip2.Open(dbPath)
+
+	if err != nil {
+		log.Fatal("Failed to open GeoIP database: %s", err)
+	}
+
+	return &GeoRouting{geoDB: db}
 }
