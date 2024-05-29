@@ -15,8 +15,9 @@ import (
 )
 
 type HealthStatus struct {
-	URL   string
-	Alive bool
+	URL     string
+	Alive   bool
+	Latency time.Duration
 }
 
 type contextKey int

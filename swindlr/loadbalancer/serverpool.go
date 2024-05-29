@@ -103,7 +103,7 @@ func (s *ServerPool) HealthCheck(healthUpdates chan<- HealthStatus) {
 		alive, latency := BackendStatus(b.URL)
 		b.setAlive(alive)
 		b.setLatency(latency)
-		healthUpdates <- HealthStatus{URL: b.URL.String(), Alive: alive}
+		healthUpdates <- HealthStatus{URL: b.URL.String(), Alive: alive, Latency: latency}
 	}
 }
 
