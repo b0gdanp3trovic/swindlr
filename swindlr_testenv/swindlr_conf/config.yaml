@@ -10,3 +10,4 @@ load_balancer:
 rate_limiting:
   rate: 10
   bucket_size: 5
+use_cache: true

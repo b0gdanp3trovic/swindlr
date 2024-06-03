@@ -14,6 +14,7 @@ type CacheItem struct {
 	Expiration   time.Time
 	ETag         string
 	LastModified time.Time
+	Header       http.Header
 }
 
 type Cache struct {
@@ -47,6 +48,7 @@ func (c *Cache) Set(key string, content []byte, headers http.Header, duration ti
 		Expiration:   time.Now().Add(duration),
 		ETag:         headers.Get("ETag"),
 		LastModified: time.Now(),
+		Header:       cloneHeader(headers),
 	}
 }
 
@@ -61,22 +63,51 @@ func (c *Cache) DeleteExpired() {
 	}
 }
 
+func cloneHeader(header http.Header) http.Header {
+	clone := make(http.Header)
+	for k, v := range header {
+		clone[k] = append([]string(nil), v...)
+	}
+	return clone
+}
+
 // Middleware logic
 type responseWriter struct {
 	http.ResponseWriter
-	status int
-	body   bytes.Buffer
-	header http.Header
+	status      int
+	body        bytes.Buffer
+	header      http.Header
+	wroteHeader bool
+}
+
+func newResponseWriter(w http.ResponseWriter) *responseWriter {
+	return &responseWriter{
+		ResponseWriter: w,
+		header:         make(http.Header),
+	}
 }
 
 func (rw *responseWriter) Write(b []byte) (int, error) {
-	rw.body.Write(b)
+	if !rw.wroteHeader {
+		rw.WriteHeader(http.StatusOK)
+	}
+	n, err := rw.body.Write(b)
+	if err != nil {
+		return n, err
+	}
 	return rw.ResponseWriter.Write(b)
 }
 
 func (rw *responseWriter) WriteHeader(status int) {
+	if rw.wroteHeader {
+		return
+	}
 	rw.status = status
+	for k, v := range rw.header {
+		rw.ResponseWriter.Header()[k] = v
+	}
 	rw.ResponseWriter.WriteHeader(status)
+	rw.wroteHeader = true
 }
 
 func (rw *responseWriter) Header() http.Header {
@@ -85,36 +116,30 @@ func (rw *responseWriter) Header() http.Header {
 
 func CacheMiddleware(cache *Cache, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if !viper.GetBool("use_cache") {
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		if item, found := cache.Get(r.URL.Path); found {
-			/*
-				The If-None-Match HTTP request header makes the request conditional.
-				For GET and HEAD methods, the server will return the requested resource, with a 200 status,
-				only if it doesn't have an ETag matching the given ones.
-			*/
 			if match := r.Header.Get("If-None-Match"); match != "" && match == item.ETag {
+				w.Header().Set("X-Swindlr-Cache", "HIT")
 				w.WriteHeader(http.StatusNotModified)
+				return
 			}
-
-			/*
-				The If-Modified-Since request HTTP header makes the request conditional:
-				the server sends back the requested resource, with a 200 status,
-				only if it has been last modified after the given date.
-			*/
 
 			if modifiedSince := r.Header.Get("If-Modified-Since"); modifiedSince != "" {
 				t, err := time.Parse(http.TimeFormat, modifiedSince)
 				if err == nil && item.LastModified.Before(t.Add(1*time.Second)) {
+					w.Header().Set("X-Swindlr-Cache", "HIT")
 					w.WriteHeader(http.StatusNotModified)
 					return
 				}
 			}
 
+			for k, v := range item.Header {
+				w.Header()[k] = v
+			}
 			w.Header().Set("ETag", item.ETag)
 			w.Header().Set("Last-Modified", item.LastModified.Format(http.TimeFormat))
 			w.Header().Set("X-Swindlr-Cache", "HIT")
@@ -123,13 +148,13 @@ func CacheMiddleware(cache *Cache, next http.Handler) http.Handler {
 		}
 
 		w.Header().Set("X-Swindlr-Cache", "MISS")
-		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK, header: make(http.Header)}
+		rw := newResponseWriter(w)
 		next.ServeHTTP(rw, r)
 
 		if rw.status == http.StatusOK {
-			cacheControl := rw.header.Get("Cache-Control")
+			cacheControl := rw.Header().Get("Cache-Control")
 			if cacheControl != "no-store" && cacheControl != "private" {
-				cache.Set(r.URL.Path, rw.body.Bytes(), rw.header, cache.ttl)
+				cache.Set(r.URL.Path, rw.body.Bytes(), rw.Header(), cache.ttl)
 			}
 		}
 	})
