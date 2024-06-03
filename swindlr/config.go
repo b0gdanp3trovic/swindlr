@@ -41,6 +41,7 @@ func checkLoadBalancerStrategy() {
 		"round_robin":       true,
 		"least_connections": true,
 		"random":            true,
+		"latency_aware":     true,
 	}
 
 	if _, valid := validStrategies[strategy]; !valid {
