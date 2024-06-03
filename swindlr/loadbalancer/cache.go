@@ -122,11 +122,23 @@ func CacheMiddleware(cache *Cache, next http.Handler) http.Handler {
 		}
 
 		if item, found := cache.Get(r.URL.Path); found {
+			/*
+				The If-None-Match HTTP request header makes the request conditional.
+				For GET and HEAD methods, the server will return the requested resource, with a 200 status,
+				only if it doesn't have an ETag matching the given ones.
+			*/
+
 			if match := r.Header.Get("If-None-Match"); match != "" && match == item.ETag {
 				w.Header().Set("X-Swindlr-Cache", "HIT")
 				w.WriteHeader(http.StatusNotModified)
 				return
 			}
+
+			/*
+				The If-Modified-Since request HTTP header makes the request conditional:
+				the server sends back the requested resource, with a 200 status,
+				only if it has been last modified after the given date.
+			*/
 
 			if modifiedSince := r.Header.Get("If-Modified-Since"); modifiedSince != "" {
 				t, err := time.Parse(http.TimeFormat, modifiedSince)
@@ -137,9 +149,12 @@ func CacheMiddleware(cache *Cache, next http.Handler) http.Handler {
 				}
 			}
 
+			// Copy cached headers
 			for k, v := range item.Header {
 				w.Header()[k] = v
 			}
+
+			// Set additional headers
 			w.Header().Set("ETag", item.ETag)
 			w.Header().Set("Last-Modified", item.LastModified.Format(http.TimeFormat))
 			w.Header().Set("X-Swindlr-Cache", "HIT")
