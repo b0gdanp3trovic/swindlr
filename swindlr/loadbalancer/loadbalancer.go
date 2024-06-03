@@ -57,16 +57,12 @@ func CreateReverseProxy(serverURL *url.URL, sp *ServerPool) *httputil.ReversePro
 		}
 
 		sp.MarkBackendStatus(serverURL, false)
-
-		attempts := GetAttemptsFromContext(request)
-		log.Printf("%s(%s) Attempting retry %d\n", request.RemoteAddr, request.URL.Path, attempts)
-		ctx := context.WithValue(request.Context(), AttemptsKey, attempts+1)
-		LB(writer, request.WithContext(ctx), sp)
+		http.Error(writer, "Service not available", http.StatusServiceUnavailable)
 	}
 	return proxy
 }
 
-func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool) {
+func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool, cache *Cache) {
 	useStickySessions := viper.GetBool("use_sticky_sessions")
 
 	if useStickySessions {
@@ -103,8 +99,10 @@ func LB(w http.ResponseWriter, r *http.Request, sp *ServerPool) {
 	peer.IncrementConnections()
 	defer peer.DecrementConnections()
 
+	// Proxy chain
 	rateLimitedProxy := RateLimitMiddleware(peer.ReverseProxy, peer)
-	rateLimitedProxy.ServeHTTP(w, r)
+	cacheProxy := CacheMiddleware(cache, rateLimitedProxy)
+	cacheProxy.ServeHTTP(w, r)
 }
 
 func BackendStatus(u *url.URL) (bool, time.Duration) {

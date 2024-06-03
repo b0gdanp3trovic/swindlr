@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/b0gdanp3trovic/swindlr/api"
 	"github.com/b0gdanp3trovic/swindlr/loadbalancer"
@@ -34,10 +35,12 @@ func main() {
 
 	serverPool := loadbalancer.SetupServerPool(backendURLs, strategy)
 
+	cache := loadbalancer.NewCache(5 * time.Minute)
+
 	server := http.Server{
 		Addr: fmt.Sprintf(":%d", port),
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			loadbalancer.LB(w, r, serverPool)
+			loadbalancer.LB(w, r, serverPool, cache)
 		}),
 	}
 

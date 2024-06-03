@@ -75,6 +75,7 @@ func initConfig(customPath string) {
 	viper.SetDefault("rate_limiting.rate", 10.0)
 	viper.SetDefault("rate_limiting.bucket_size", 5)
 	viper.SetDefault("use_geo_routing", false)
+	viper.SetDefault("use_cache", false)
 
 	// Read the config file
 	if err := viper.ReadInConfig(); err != nil {
